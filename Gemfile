@@ -12,5 +12,6 @@ gem 'pry'
 gem 'pry-byebug'
 gem 'selenium-webdriver'
 gem 'awesome_print'
+gem 'activesupport'
 
 

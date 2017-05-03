@@ -8,6 +8,8 @@ require 'dotenv'
 require 'awesome_print'
 require 'time'
 require 'net/http'
+require 'active_support'
+require 'active_support/core_ext'
 
 class Slack
   attr_reader :token
@@ -19,9 +21,11 @@ class Slack
 
   def update(status)
     url = URI.parse(SLACK_API_URL)
+    ap status.status_emoji
+    ap status.status_text
     params = {profile: {status_text: status.status_text, status_emoji: status.status_emoji}.to_json.to_s, token: token}
     http = Net::HTTP.new(url.host,url.port)
-    http.set_debug_output $stderr
+    # http.set_debug_output $stderr
     http.use_ssl = true
     http.start do
       req = Net::HTTP::Post.new(url.path)
@@ -56,17 +60,30 @@ class Jmotto
     session.fill_in 'userID', with: user_id
     session.fill_in 'password', with: password
 
-    session.save_screenshot('./ss/login/login.png')
+    # session.save_screenshot('./ss/login/login.png')
     session.click_button('ログイン')
 
-    sleep 6
-    session.save_screenshot('./ss/login/after.png')
+    sleep 7
+    # session.save_screenshot('./ss/login/after.png')
 
     doc = Nokogiri::HTML.parse(session.html)
 
     current_schedules = []
+    if !doc.xpath('//td[@class="cal-day co-today co-holiday"]').empty? or
+      !doc.xpath('//td[@class="cal-day co-today co-holiday"]').empty? or
+      !doc.xpath('//td[@class="cal-day co-today co-saturday"]').empty?
+
+      current_schedules.push({
+        name: '休日',
+        term_str: '終日',
+        terms: [Time.current.beginning_of_day,Time.current.end_of_day],
+        category: 'rest'
+      });
+
+      return current_schedules
+    end
     doc.xpath('//td[@class="cal-day co-today"]//div[@class="cal-item-box"]').each{|node|
-      ap node
+    # doc.xpath('//td[@class="cal-day co-today co-holiday"]//div[@class="cal-item-box"]').each{|node|
       schedule = node2hash(node)
       current_schedules.push(schedule) if Time.now().between?(schedule[:terms][0],schedule[:terms][1])
     }
@@ -75,7 +92,7 @@ class Jmotto
   end
 
   def fix_category(node)
-    # jmotto
+    ap node
     name = node.xpath('.//a').text
     if !node.xpath('.//a/span[@class="sch-ictype1-scr"]').empty?
       return 'secret'
@@ -95,7 +112,7 @@ class Jmotto
     ap category
 
     {
-      name:     (category == 'secret') ? '' : name,
+      name:     (category == 'secret') ? 'meeting' : name,
       terms:    term,
       term_str: term_str,
       category: category,
@@ -109,7 +126,7 @@ class Status
     remote: ":house:",
     meeting: ":speech_balloon:",
     rest: ":palm_tree:",
-    secret: ":speech_baloon:",
+    secret: ":speech_balloon:",
   }
 
   def initialize
@@ -133,5 +150,6 @@ Dotenv.load
 current_schedules = Jmotto.new().get_current_schedules
 status = Status.new()
 status.fix_status(current_schedules)
+# ap status
 
 Slack.new().update(status)
