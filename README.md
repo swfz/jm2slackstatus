@@ -1,4 +1,6 @@
-# JMOTTO 2 Slack status
+# JMOTTO to Slack status
+
+synchronize jmotto status
 
 - .env
 
@@ -6,7 +8,7 @@
 JMOTTO_MEMBER_ID=xxx
 JMOTTO_USER_ID=xxx
 JMOTTO_PASSWORD=xxx
-SLACK_
+SLACK_TOKEN=xxx
 ```
 
 - set cron
